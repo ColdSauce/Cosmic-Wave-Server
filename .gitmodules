@@ -1,0 +1,3 @@
+[submodule "CosmicWaveModem"]
+	path = CosmicWaveModem
+	url = https://github.com/anubiann00b/CosmicWaveModem.git
