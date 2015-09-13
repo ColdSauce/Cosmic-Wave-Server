@@ -15,7 +15,7 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 
 app = Flask(__name__)
 
-@app.route('sounds/<path:path>')
+@app.route('/sounds/<path:path>')
 def get_file(path):
     return send_from_directory('sounds', path)
 
@@ -50,9 +50,9 @@ def record_sound(seconds):
 def play_sound():
     b_song = request.get.value('audio', None)
     real_song = BytesIO(base64.b64decode(b_song))
-    song_name = 'static/soundToPlay.wav'
-    with wave.open(song_name, 'w') as soundToPlayFile:
-        real_song.write(real_song.getvalue())
+    song_name = 'sounds/something.wav'
+    with open(song_name, 'w') as soundToPlayFile:
+        soundToPlayFile.write(real_song.getvalue())
 
     client = TwilioRestClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
     client.calls.create(to=MAIN_PN, from_='18559977576',url='http://e4a7d353.ngrok.io/playSoundXml')

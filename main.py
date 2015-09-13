@@ -62,6 +62,10 @@ def receive_phone():
     resp.record(maxLength="15",action="/handle_receive_phone", trim="do-not-trim")
     return str(resp)
 
+
+def handle_bad_url():
+    print 'lolzard bad url'
+
 @app.route("/handle_receive_phone", methods=['GET','POST'])
 def handle_receive_phone():
     resp = twilio.twiml.Response()
@@ -70,11 +74,12 @@ def handle_receive_phone():
     audio = BytesIO(response.content)
     decoded_audio = cosmicmodem.decode(audio)
     url = decoded_audio
+
     try:
         resp = requests.get(url)
     except:
-        pass
-
+        handle_bad_url()
+        return
 
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
     response = requests.get(url,headers=headers)
