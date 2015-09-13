@@ -1,18 +1,70 @@
-from Flask import flask
-from BytesIO import BytesIO
+from flask import Flask, request
+from io import BytesIO
 import CosmicWaveModem.cosmicmodem as cosmicmodem
 import requests
+import sys
+import twilio 
+import os
+import twilio.twiml
+import wave
+import base64
+from bs4 import BeautifulSoup
+
+from twilio.rest import TwilioRestClient
 
 app = Flask(__name__)
+
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+
+@app.route("/", methods=['GET','POST'])
+def index():
+    return receive_phone()
 
 @app.route("/audio", methods=['POST'])
 def send_audio_bits():
     resp = twilio.twiml.Response()
+    encoded_bytes = request.values.get("audioData", None)
+    decoded_bytes = base64.b64decode(encoded_bytes)
+    with wave.open('file_to_send.wav', 'w') as wav:
+        wav.writeframes(decoded_bytes)
+    resp.play('file_to_send.wav')
+    return str(resp)
+
+def _strip_element(html, element):
+    soup = BeautifulSoup(html)
+    for javascript in soup(element):
+        javascript.extract()
+    return soup.encode('UTF-8')
+
+def strip_js(html):
+    return _strip_element(html,'script')
+
+def strip_css(html):
+    return _strip_element(html,'css')
+def strip_images(html):
+    return _strip_element(html,'img')
+    
+@app.route('/text',methods=['POST'])
+def receive_text():
+    resp = twilio.twiml.Response()
+    from_number = request.values.get('From', None)
+    body = request.values.get('Body', None)
+    url = body
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+    response = requests.get(url,headers=headers)
+    html = response.content
+    stripped_html = strip_css(html)
+    stripped_html = strip_js(html)
+    stripped_html = strip_images(html)
+    audio = cosmicmodem.encode(stripped_html)
+    sys.stdout.write(audio.getvalue())
+    return ""
 
 @app.route("/receivePhone", methods=['GET', 'POST'])
 def receive_phone():
     resp = twilio.twiml.Response()
-    resp.record(maxLength="10",action="/handle_receive_phone", trim="do-not-trim")
+    resp.record(maxLength="100",action="/handle_receive_phone", trim="do-not-trim")
     return str(resp)
 
 @app.route("/handle_receive_phone", methods=['GET','POST'])
@@ -20,17 +72,8 @@ def handle_receive_phone():
     resp = twilio.twiml.Response()
     recording_url = request.values.get("RecordingUrl", None)
     response = requests.get(recording_url)
-    audio = ByteIO(response.content)
-    get_samples_from_audio(audio)
+    audio = BytesIO(response.content)
+    decoded_audio = cosmicmodem.decode(audio)
 
-#def get_frames_from_wav(wav):
-    #opened_wav = wave.open(wav)
-    #total_frames = opened_wav.getnframes()
-    #return bytearray(opened_wav.readframes(total_frames))
-
-""" Gets an array of doubles that is the array of samples """
-#def get_url_from_audio(audio_bytes):
-
-
-
-
+if __name__ == '__main__':
+    app.run(debug=True)
