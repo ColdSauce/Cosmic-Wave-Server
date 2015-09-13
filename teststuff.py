@@ -11,19 +11,26 @@ from io import BytesIO
 import pytest
 import logging
 
+def get_bigger_string(size):
+    acc = ""
+    for x in range(0,size):
+        acc += "s"
+    return acc
+
 def run(size, chan=None, df=0, success=True, cfg=None):
 
     if cfg is None:
         cfg = config.slowest()
         
-    tx_data ="o87tg7gwwgfiuyyvqweirruvqweefiuvqweqfifugvgqweefiugugvqvwefeiuguvqwveriugugv23r3iuguvv234i4uggv23riugvvqweriugvqwerriuggvqweriuguvqwerr" 
+    tx_data=get_bigger_string(10000)
     tx_audio = BytesIO()
     main.send(config=cfg, src=BytesIO(tx_data), dst=tx_audio, gain=0.5)
+    with open('rx_data.wav','w') as f:
+        f.write(tx_audio.getvalue())
+        f.flush()
     dst = BytesIO()
     sampling.resample(src=tx_audio, dst=dst, df=50.0)
-    with open('rx_data.wav','w') as f:
-        f.write(dst.getvalue())
-        f.flush()
+    
 
 """
     data = tx_audio.getvalue()
